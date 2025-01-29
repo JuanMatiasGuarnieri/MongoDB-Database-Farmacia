@@ -1,0 +1,62 @@
+db.ventas.aggregate([
+  {
+    $addFields: {
+      fecha: {
+        $toDate: "$fecha"
+      }
+    }
+  },
+  {
+    $match: {
+      fecha: {
+        $gt: ISODate("2024-01-01"),
+        $lt: ISODate()
+      }
+    }
+  },
+  {
+    $unwind: "$items"
+  },
+  {
+    $project: {
+      ticket: "$nroTicket",
+      sucursal: "$sucursal.nombre",
+      total: "$total",
+      detalle: {
+        producto: "$items.producto.descripcion",
+        tipo: "$items.producto.tipo.nombre",
+        precio: "$items.producto.precio",
+        cantidad: "$items.cantidad"
+      }
+    }
+  },
+  {
+    $group: {
+      _id: {
+        sucursal: "$sucursal",
+        ticket: "$ticket"
+      },
+      total: {
+        $first: "$total"
+      },
+      detalle: {
+        $addToSet: "$detalle"
+      }
+    }
+  },
+  {
+    $group: {
+      _id: "$_id.sucursal",
+      total_ventas: {
+        $sum: "$total"
+      },
+      ventas: {
+        $addToSet: {
+          ticket: "$_id.ticket",
+          total: "$total",
+          detalle: "$detalle"
+        }
+      }
+    }
+  }
+]);
